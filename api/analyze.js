@@ -1,4 +1,4 @@
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -25,27 +25,25 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No code provided' });
   }
 
-  if (!ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY is not set');
-    return res.status(500).json({ error: 'API key not configured. Please add ANTHROPIC_API_KEY to your Vercel environment variables.' });
+  if (!GROQ_API_KEY) {
+    console.error('GROQ_API_KEY is not set');
+    return res.status(500).json({ 
+      error: 'API key not configured. Please add GROQ_API_KEY to your Vercel environment variables.',
+      help: 'Get a free API key at https://console.groq.com'
+    });
   }
 
-  console.log('API Key present:', ANTHROPIC_API_KEY ? 'Yes' : 'No');
-  console.log('API Key prefix:', ANTHROPIC_API_KEY ? ANTHROPIC_API_KEY.substring(0, 10) + '...' : 'N/A');
-
   try {
-    console.log('Making request to Anthropic API...');
+    console.log('Making request to Groq API...');
     
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'content-type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
+        model: 'llama-3.3-70b-versatile',
         messages: [{
           role: 'user',
           content: `You are an expert algorithm analyst. Analyze the following code and provide ONLY a JSON response with this exact structure:
@@ -66,36 +64,38 @@ ${code}
 \`\`\`
 
 Respond ONLY with valid JSON, no markdown, no preamble.`
-        }]
+        }],
+        temperature: 0.3,
+        max_tokens: 1000
       })
     });
 
     console.log('Response status:', response.status);
-    console.log('Response ok:', response.ok);
 
     const data = await response.json();
-    console.log('Response data preview:', JSON.stringify(data).substring(0, 300));
+    console.log('Response received');
 
     // Check for API errors
     if (data.error) {
-      console.error('Anthropic API Error:', data.error);
+      console.error('Groq API Error:', data.error);
       return res.status(500).json({ 
-        error: 'Anthropic API Error', 
+        error: 'Groq API Error', 
         details: data.error.message || JSON.stringify(data.error)
       });
     }
 
-    if (!data.content || !data.content[0]) {
-      console.error('Invalid response structure. Full response:', JSON.stringify(data));
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid response structure:', JSON.stringify(data));
       return res.status(500).json({ 
         error: 'Invalid API response structure',
-        details: 'The API response did not contain expected content field'
+        details: 'The API response did not contain expected choices field'
       });
     }
 
-    let resultText = data.content[0].text;
+    let resultText = data.choices[0].message.content;
     console.log('Result text preview:', resultText.substring(0, 100));
     
+    // Clean up markdown formatting
     resultText = resultText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
     const analysis = JSON.parse(resultText);
