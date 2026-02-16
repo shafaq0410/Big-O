@@ -546,50 +546,22 @@ def binary_search(arr, target):
       `;
 
       try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        const response = await fetch('/api/analyze', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 1000,
-            messages: [{
-              role: 'user',
-              content: `You are an expert algorithm analyst. Analyze the following code and provide ONLY a JSON response with this exact structure:
-
-{
-  "timeComplexity": "O(...)",
-  "timeExplanation": "Brief explanation of why",
-  "spaceComplexity": "O(...)",
-  "spaceExplanation": "Brief explanation of why",
-  "detailedAnalysis": "Detailed breakdown of the algorithm's behavior, loops, recursion, data structures used, and how they contribute to the complexity"
-}
-
-Language: ${selectedLanguage}
-
-Code:
-\`\`\`
-${code}
-\`\`\`
-
-Respond ONLY with valid JSON, no markdown, no preamble.`
-            }]
+            code: code,
+            language: selectedLanguage
           })
         });
 
-        const data = await response.json();
+        const analysis = await response.json();
         
-        if (!data.content || !data.content[0]) {
-          throw new Error('Invalid response from API');
+        if (analysis.error) {
+          throw new Error(analysis.error);
         }
-
-        let resultText = data.content[0].text;
-        
-        // Clean up potential markdown formatting
-        resultText = resultText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        
-        const analysis = JSON.parse(resultText);
 
         document.getElementById('results').innerHTML = `
           <div class="complexity-card">
