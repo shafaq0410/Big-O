@@ -53,7 +53,7 @@ def bubble_sort(arr):
 ## 🚀 Quick Start (For the Impatient)
 
 ### Method 1: Just Use It Lol
-1. Go to the [live site](#)
+1. Go to the [live site](https://big-o-one.vercel.app/)
 2. Paste your sus code
 3. Click "Analyze"
 4. Get humbled (or validated)
